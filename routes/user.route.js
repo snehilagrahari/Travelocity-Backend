@@ -36,8 +36,8 @@ userRouter.post('/register',checkExistingUser, checkRegisterDetails , async(req,
                 const user = new UserModel({
                     name, email,password: hash, age, address, mobile, gender
                 });
-                await user.save();
-                res.send({message : 'Registration Successful!'});       
+                const mes = await user.save();
+                res.send({message : 'Registration Successful!', mes : mes});       
             }
         })
     }
@@ -51,8 +51,12 @@ userRouter.post('/register',checkExistingUser, checkRegisterDetails , async(req,
 userRouter.post('/login',async (req,res)=>{
     try{
         const {email, password} = req.body;
-        const match = await UserModel.findOne({email});
-        bcrypt.compare(password, match.password, (err, result)=>{
+        const match = await UserModel.find({email});
+        if(match.length===0){
+            res.status(400).send({message : "Email not registered!"});
+            return;
+        }
+        bcrypt.compare(password, match[0].password, (err, result)=>{
             if(err){
                 res.status(400).send({message : err.message});
             }
@@ -60,12 +64,12 @@ userRouter.post('/login',async (req,res)=>{
                 res.status(400).send({message : 'Incorrect Password'});
             }
             else if(result===true){
-                jwt.sign({id : match['_id']},process.env.JWT_KEY,(err,token)=>{
+                jwt.sign({id : match[0]['_id']},process.env.JWT_KEY,(err,token)=>{
                     if(err){
                         res.status(400).send({message : err.message});
                     }
                     else{
-                        res.send({token, username : match.name});
+                        res.send({token, username : match[0].name});
                     }
                 })
             }
